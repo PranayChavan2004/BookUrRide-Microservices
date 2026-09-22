@@ -178,6 +178,6 @@ BookUrRide/
 
 ### matching-service — `:8084`
 
-Has no public REST API of its own — it's a pure Kafka consumer/producer that also makes an outbound REST call to location-service.
----
+The matching-service has no public REST API of its own. It acts as a Kafka consumer/producer and makes an outbound REST call to `location-service` to find nearby drivers.
+
 
