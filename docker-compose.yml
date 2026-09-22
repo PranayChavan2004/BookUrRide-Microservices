@@ -1,0 +1,87 @@
+# BookUrRide Microservices - local infrastructure
+#
+# Services:
+#   Redis  -> driver location / GEO data
+#   MySQL  -> ride-service database
+#   Kafka  -> event-driven communication (KRaft, no ZooKeeper)
+#
+# Spring Boot services are run from IntelliJ/Maven on the host machine.
+# They connect through localhost using the published ports below.
+
+services:
+
+  # --------------------------------------------------
+  # REDIS - Driver Location Storage
+  # --------------------------------------------------
+  redis:
+    image: redis:7.4-alpine
+    container_name: bookur-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    networks:
+      - bookur-network
+
+  # --------------------------------------------------
+  # MYSQL - Ride Service Database
+  # --------------------------------------------------
+  mysql:
+    image: mysql:8.4
+    container_name: bookur-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: yeshendra33
+      MYSQL_DATABASE: uberapp
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - bookur-network
+
+  # --------------------------------------------------
+  # KAFKA - Event Streaming
+  # Kafka 4.x uses KRaft; ZooKeeper is not required.
+  # --------------------------------------------------
+  kafka:
+    image: apache/kafka:4.3.1
+    container_name: bookur-kafka
+    restart: unless-stopped
+    ports:
+      - "9092:9092"
+    environment:
+      # Single-node KRaft broker + controller for local development
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+
+      # Kafka client listener + KRaft controller listener
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+
+      # Local single-broker development settings
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 3
+
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      - bookur-network
+
+volumes:
+  redis-data:
+  mysql-data:
+  kafka-data:
+
+networks:
+  bookur-network:
+    driver: bridge
