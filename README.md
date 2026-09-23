@@ -1,18 +1,12 @@
 # BookUrRide
 
-A microservices-based ride-hailing backend built to understand — from the ground up — how apps like Uber, Ola and Rapido handle thousands of concurrent ride requests using **Kafka** for event-driven communication and **Redis Geospatial** for real-time driver matching.
+A microservices-based ride-hailing backend built to understand — from the ground up — how apps like Uber, Ola and Rapido handle thousands of concurrent ride requests and real-time driver matching.
 
 ---
 
 ## Project Overview
 
 BookUrRide simulates the core backend of a ride-hailing platform, broken into three independent Spring Boot microservices that never call each other directly for the critical path. Instead, they coordinate through **Kafka topics** (asynchronous, durable messaging) and look up live driver positions through **Redis's geospatial commands** (sub-millisecond radius search).
-
-This project was built specifically as a learning exercise to answer two questions:
-
-- **How does Kafka let independent services react to events without knowing about each other, while staying reliable if one service goes down?**
-- **How does Redis let a system find "which of these 1000 drivers is nearest to this pickup point" in milliseconds instead of scanning a database table?**
-
 The result is a working, end-to-end simulation of the "request a ride → find a driver → get matched" flow that mirrors, at a small scale, the same architectural patterns production ride-hailing systems use.
 
 ---
@@ -45,11 +39,6 @@ Ride Service ──── produces ────▶  Kafka Topic: ride.requested
                                                                                         ▼
                                                                           updates MySQL: driverId + status = ACCEPTED
 ```
-
-**The core design principle:** `ride-service` and `matching-service` never hold a reference to each other's URL for the matching flow — they only know about Kafka topic names. This is what makes the system resilient: if `matching-service` is temporarily down, `ride.requested` events simply queue up in Kafka and get processed the moment it comes back, instead of the request failing outright.
-
----
-
 ## Tech Stack
 
 | Layer | Technology |
@@ -69,7 +58,7 @@ Ride Service ──── produces ────▶  Kafka Topic: ride.requested
 
 ## Services
 
-Three independently runnable Spring Boot applications, each with its own `pom.xml`, port, and data store — a genuine microservices split rather than a modularized monolith.
+Three independently runnable Spring Boot applications, each with its own `pom.xml`, port and data store — a genuine microservices split rather than a modularized monolith.
 
 ### `location-service` — port `8082`
 
@@ -118,9 +107,7 @@ The "brain" of the system — pure orchestration, no database of its own. Consum
 - **Redis Geospatial commands** — `GEOADD`, `GEORADIUS` (via Spring Data Redis's `opsForGeo()`), `ZREM`, `GEOPOS`, `GEODIST`
 - **Asynchronous vs. synchronous communication** — Kafka (async, durable, decoupled) used for the ride-matching handoff; REST/Feign (sync, blocking) used for the location lookup
 - **Ride state machine** — `REQUESTED → MATCHING → ACCEPTED → DRIVER_ARRIVING → RIDE_STARTED → COMPLETED` (with `CANCELLED` reachable from multiple states)
-- **Driver scoring algorithm** — weighted score combining proximity (70%) and rating (30%) to pick the best available driver
 - **Service-to-service REST communication** — declarative HTTP client via `@FeignClient`
-- **Infrastructure as code** — single `docker-compose.yml` spinning up Redis, MySQL, and Kafka (KRaft-mode, no ZooKeeper) for local development
 
 ---
 
