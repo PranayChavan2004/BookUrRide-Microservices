@@ -33,7 +33,7 @@ services:
     container_name: bookur-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: yeshendra33
+      MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: uberapp
     ports:
       - "3306:3306"
